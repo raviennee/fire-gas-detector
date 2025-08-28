@@ -2,15 +2,17 @@
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
 Servo myServo;
 
-const int sensorPins[2] = {A0, A1};  //[0] = gas, [1] = fire
-int sensorValues[2];                 //nilai bacaan sensor
-
+//Pin
+const int gasPin = A0;
+const int firePin = A1;
 const int servoPin = 9;
-const int fanPin = 10;
-const int leds[3] = {2, 3, 4}; // [0]=red, [1]=yellow, [2]=green
+const int fanPin = 10; 
+const int ledRed = 2;
+const int ledYellow = 3;
+const int ledGreen = 4;
 
 //Threshold
 const int gasThreshold = 300;
@@ -26,87 +28,87 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.print("Gas:    Api:");
-
+  
   myServo.attach(servoPin);
   myServo.write(centerAngle);
-
+  
   pinMode(fanPin, OUTPUT);
-  digitalWrite(fanPin, HIGH); //kipas off
 
-  for (int i = 0; i < 3; i++) {
-    pinMode(leds[i], OUTPUT);
-  }
+  pinMode(ledRed, OUTPUT);
+  pinMode(ledYellow, OUTPUT);
+  pinMode(ledGreen, OUTPUT);
 
-  digitalWrite(leds[0], LOW);   //merah
-  digitalWrite(leds[1], LOW);   //kuning
-  digitalWrite(leds[2], HIGH);  //hijau (safe)
+  digitalWrite(ledRed, LOW);
+  digitalWrite(ledYellow, LOW);
+  digitalWrite(ledGreen, HIGH);
 }
 
 void loop() {
-  sensorValues[0] = analogRead(sensorPins[0]);       //Gas
-  sensorValues[1] = 1023 - analogRead(sensorPins[1]); //Fire (dibalik)
-
+  int gasValue = analogRead(gasPin);
+  int fireValue = 1023 - analogRead(firePin);
+  
   bool alertActive = false;
 
   //prioritas api>gas
-  if (sensorValues[1] > fireThreshold && sensorValues[0] > gasThreshold) {
+  if (fireValue > fireThreshold && gasValue > gasThreshold) {
     myServo.write(fireAngle);
-    digitalWrite(fanPin, LOW); //Kipas on
+    digitalWrite(fanPin, LOW);
     alertActive = true;
 
     lcd.setCursor(0, 1);
     lcd.print(" ALL DETECTED  ");
-    digitalWrite(leds[0], HIGH);
-    digitalWrite(leds[1], HIGH);
-    digitalWrite(leds[2], LOW);
+    digitalWrite(ledRed, HIGH);
+    digitalWrite(ledYellow, HIGH);
+    digitalWrite(ledGreen, LOW);
   }
-  else if (sensorValues[1] > fireThreshold) {
+  else if (fireValue > fireThreshold) {
     myServo.write(fireAngle);
-    digitalWrite(fanPin, LOW); //Kipas on
+    digitalWrite(fanPin, LOW);
     alertActive = true;
 
     lcd.setCursor(0, 1);
     lcd.print(" FIRE DETECTED ");
-    digitalWrite(leds[0], HIGH);
-    digitalWrite(leds[1], LOW);
-    digitalWrite(leds[2], LOW);
+    digitalWrite(ledRed, HIGH);
+    digitalWrite(ledYellow, LOW);
+    digitalWrite(ledGreen, LOW);
   }
-  else if (sensorValues[0] > gasThreshold) {
+  else if (gasValue > gasThreshold) {
     myServo.write(gasAngle);
-    digitalWrite(fanPin, LOW); //Kipas on
+    digitalWrite(fanPin, LOW);
     alertActive = true;
 
     lcd.setCursor(0, 1);
     lcd.print("  GAS DETECTED ");
-    digitalWrite(leds[0], LOW);
-    digitalWrite(leds[1], HIGH);
-    digitalWrite(leds[2], LOW);
+    digitalWrite(ledRed, LOW);
+    digitalWrite(ledYellow, HIGH);
+    digitalWrite(ledGreen, LOW);
+  }
+  else {
+    // NORMAL
+    digitalWrite(fanPin, HIGH); //kipas off
   }
 
-  //NORMAL
   if (!alertActive) {
     myServo.write(centerAngle);
-    digitalWrite(fanPin, HIGH); //Kipas off
-
     lcd.setCursor(0, 1);
     lcd.print("     NORMAL    ");
-    digitalWrite(leds[0], LOW);
-    digitalWrite(leds[1], LOW);
-    digitalWrite(leds[2], HIGH);
+    digitalWrite(ledRed, LOW);
+    digitalWrite(ledYellow, LOW);
+    digitalWrite(ledGreen, HIGH);
   }
 
   lcd.setCursor(4, 0);
   lcd.print("    ");
   lcd.setCursor(4, 0);
-  lcd.print(sensorValues[0]);
+  lcd.print(gasValue);
 
   lcd.setCursor(12, 0);
   lcd.print("    ");
   lcd.setCursor(12, 0);
-  lcd.print(sensorValues[1]);
+  lcd.print(fireValue);
 
-  Serial.print("Gas: "); Serial.print(sensorValues[0]);
-  Serial.print(" | Fire: "); Serial.println(sensorValues[1]);
+  Serial.print("Gas: "); Serial.print(gasValue);
+  Serial.print(" | Fire: "); Serial.println(fireValue);
 
   delay(500);
 }
